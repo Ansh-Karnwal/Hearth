@@ -1,5 +1,3 @@
-import type { FunctionDeclaration } from "@google/genai";
-import { Type } from "@google/genai";
 import { state, money, moveEvents, utilityAccounts, type MoveEvent, type UtilityAccount } from "./state.js";
 import { parseExpense, applyExpense, buildExpenseAck } from "./ledger.js";
 import {
@@ -22,26 +20,32 @@ export interface ToolContext {
 
 // ── Function declarations ─────────────────────────────────────────────────────
 
-export const toolDeclarations: FunctionDeclaration[] = [
+interface FunctionDeclaration {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+const functionDeclarations: FunctionDeclaration[] = [
   // Ledger
   {
     name: "log_expense",
     description:
       "Record a shared expense and update balances. Use when someone says they paid for something shared (groceries, utilities, takeout, etc.).",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        payer: { type: Type.STRING, description: "who paid" },
-        amount: { type: Type.NUMBER, description: "total amount paid" },
-        description: { type: Type.STRING, description: "what the money was for" },
+        payer: { type: "string", description: "who paid" },
+        amount: { type: "number", description: "total amount paid" },
+        description: { type: "string", description: "what the money was for" },
         split_type: {
-          type: Type.STRING,
+          type: "string",
           enum: ["even", "item-attributed"],
           description: "even = equal split; item-attributed = specific costs to specific people",
         },
         beneficiaries: {
-          type: Type.ARRAY,
-          items: { type: Type.STRING },
+          type: "array",
+          items: { type: "string" },
           description: "everyone who shares the cost, including the payer if applicable",
         },
       },
@@ -53,7 +57,7 @@ export const toolDeclarations: FunctionDeclaration[] = [
   {
     name: "get_balances",
     description: "Return current balances for all household members. Use when someone asks who owes what.",
-    parameters: { type: Type.OBJECT, properties: {} },
+    parameters: { type: "object", properties: {} },
   },
 
   // Grocery
@@ -62,10 +66,10 @@ export const toolDeclarations: FunctionDeclaration[] = [
     description:
       "Add one or more items to the shared grocery list. Use when someone says they need something or are out of something.",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        items: { type: Type.ARRAY, items: { type: Type.STRING }, description: "item names, lowercase" },
-        requested_by: { type: Type.STRING, description: "who requested the items" },
+        items: { type: "array", items: { type: "string" }, description: "item names, lowercase" },
+        requested_by: { type: "string", description: "who requested the items" },
       },
       required: ["items", "requested_by"],
     },
@@ -74,10 +78,10 @@ export const toolDeclarations: FunctionDeclaration[] = [
     name: "remove_grocery_items",
     description: "Remove items from the grocery list (bought or no longer needed).",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        items: { type: Type.ARRAY, items: { type: Type.STRING } },
-        action: { type: Type.STRING, enum: ["fulfill", "remove"], description: "fulfill = bought; remove = taken off without buying" },
+        items: { type: "array", items: { type: "string" } },
+        action: { type: "string", enum: ["fulfill", "remove"], description: "fulfill = bought; remove = taken off without buying" },
       },
       required: ["items", "action"],
     },
@@ -85,7 +89,7 @@ export const toolDeclarations: FunctionDeclaration[] = [
   {
     name: "get_grocery_list",
     description: "Return the current grocery list. Use when someone asks what's on the list.",
-    parameters: { type: Type.OBJECT, properties: {} },
+    parameters: { type: "object", properties: {} },
   },
 
   // Grocery ordering
@@ -94,9 +98,9 @@ export const toolDeclarations: FunctionDeclaration[] = [
     description:
       "Build the grocery list into a cart on Instacart, screenshot it, and send it to the house for approval before checking out. Use when someone says 'do the grocery run', 'order groceries', 'place the order'.",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        note: { type: Type.STRING, description: "optional instruction, e.g. 'split evenly this time'" },
+        note: { type: "string", description: "optional instruction, e.g. 'split evenly this time'" },
       },
     },
   },
@@ -107,11 +111,11 @@ export const toolDeclarations: FunctionDeclaration[] = [
     description:
       "Log something that needs to be done but hasn't been assigned yet. Use for 'we should', 'someone needs to', 'can someone' messages.",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        description: { type: Type.STRING },
-        raised_by: { type: Type.STRING },
-        deadline: { type: Type.STRING, description: "ISO timestamp if a specific time was mentioned" },
+        description: { type: "string" },
+        raised_by: { type: "string" },
+        deadline: { type: "string", description: "ISO timestamp if a specific time was mentioned" },
       },
       required: ["description", "raised_by"],
     },
@@ -122,10 +126,10 @@ export const toolDeclarations: FunctionDeclaration[] = [
     name: "set_household_fact",
     description: "Store a household fact (lease end date, landlord info, wifi password, etc.).",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        key: { type: Type.STRING, description: "e.g. 'lease_end', 'landlord_name', 'wifi_password'" },
-        value: { type: Type.STRING },
+        key: { type: "string", description: "e.g. 'lease_end', 'landlord_name', 'wifi_password'" },
+        value: { type: "string" },
       },
       required: ["key", "value"],
     },
@@ -133,7 +137,7 @@ export const toolDeclarations: FunctionDeclaration[] = [
   {
     name: "get_household_facts",
     description: "Return all stored household facts.",
-    parameters: { type: Type.OBJECT, properties: {} },
+    parameters: { type: "object", properties: {} },
   },
 
   // Maintenance (F1)
@@ -142,12 +146,12 @@ export const toolDeclarations: FunctionDeclaration[] = [
     description:
       "Log a household maintenance issue. Detect priority: urgent for water/heat/gas/safety; medium for appliances/fixtures; low for cosmetic. Call when someone mentions something broken, leaking, not working, or needing repair.",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        description: { type: Type.STRING },
-        reported_by: { type: Type.STRING },
-        priority: { type: Type.STRING, enum: ["low", "medium", "urgent"] },
-        photo_url: { type: Type.STRING, description: "Telegram file_id if a photo was attached" },
+        description: { type: "string" },
+        reported_by: { type: "string" },
+        priority: { type: "string", enum: ["low", "medium", "urgent"] },
+        photo_url: { type: "string", description: "Telegram file_id if a photo was attached" },
       },
       required: ["description", "reported_by", "priority"],
     },
@@ -157,9 +161,9 @@ export const toolDeclarations: FunctionDeclaration[] = [
     description:
       "Draft a professional maintenance message to the landlord, pulling in unit number, lease reference, and issue history.",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        issue_id: { type: Type.STRING },
+        issue_id: { type: "string" },
       },
       required: ["issue_id"],
     },
@@ -171,19 +175,19 @@ export const toolDeclarations: FunctionDeclaration[] = [
     description:
       "Add an event to the household calendar: repair windows, package arrivals, guests, trips, parties, lease dates, etc. Automatically add when grocery runs are scheduled or repairs booked.",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        title: { type: Type.STRING },
-        event_date: { type: Type.STRING, description: "ISO date YYYY-MM-DD" },
-        event_time: { type: Type.STRING, description: "HH:MM 24h, optional" },
-        duration_minutes: { type: Type.NUMBER },
-        all_day: { type: Type.BOOLEAN },
-        affects_members: { type: Type.ARRAY, items: { type: Type.STRING } },
+        title: { type: "string" },
+        event_date: { type: "string", description: "ISO date YYYY-MM-DD" },
+        event_time: { type: "string", description: "HH:MM 24h, optional" },
+        duration_minutes: { type: "number" },
+        all_day: { type: "boolean" },
+        affects_members: { type: "array", items: { type: "string" } },
         event_type: {
-          type: Type.STRING,
+          type: "string",
           enum: ["repair", "guest", "travel", "bill", "social", "move", "package", "other"],
         },
-        notes: { type: Type.STRING },
+        notes: { type: "string" },
       },
       required: ["title", "event_date", "event_type"],
     },
@@ -192,9 +196,9 @@ export const toolDeclarations: FunctionDeclaration[] = [
     name: "get_house_calendar",
     description: "Return upcoming household events for the next N days.",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        days: { type: Type.NUMBER, description: "default 7" },
+        days: { type: "number", description: "default 7" },
       },
     },
   },
@@ -203,12 +207,12 @@ export const toolDeclarations: FunctionDeclaration[] = [
     description:
       "Check if a proposed event conflicts with existing calendar entries. Use before confirming repair windows, guest visits, or house events.",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        event_date: { type: Type.STRING },
-        event_time: { type: Type.STRING },
-        duration_minutes: { type: Type.NUMBER },
-        affects_members: { type: Type.ARRAY, items: { type: Type.STRING } },
+        event_date: { type: "string" },
+        event_time: { type: "string" },
+        duration_minutes: { type: "number" },
+        affects_members: { type: "array", items: { type: "string" } },
       },
       required: ["event_date"],
     },
@@ -220,10 +224,10 @@ export const toolDeclarations: FunctionDeclaration[] = [
     description:
       "Check consumption patterns and proactively suggest reordering items likely running low. Call when someone mentions being out of something, or on the daily scheduled check.",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        triggered_by: { type: Type.STRING, enum: ["mention", "scheduled"] },
-        item_mentioned: { type: Type.STRING, description: "the specific item mentioned if triggered_by is mention" },
+        triggered_by: { type: "string", enum: ["mention", "scheduled"] },
+        item_mentioned: { type: "string", description: "the specific item mentioned if triggered_by is mention" },
       },
       required: ["triggered_by"],
     },
@@ -235,11 +239,11 @@ export const toolDeclarations: FunctionDeclaration[] = [
     description:
       "Start a move-in or move-out workflow. Triggered when someone mentions a roommate leaving or a new one joining.",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        type: { type: Type.STRING, enum: ["move_in", "move_out"] },
-        member: { type: Type.STRING, description: "name of the person moving" },
-        target_date: { type: Type.STRING, description: "ISO date of the move" },
+        type: { type: "string", enum: ["move_in", "move_out"] },
+        member: { type: "string", description: "name of the person moving" },
+        target_date: { type: "string", description: "ISO date of the move" },
       },
       required: ["type", "member", "target_date"],
     },
@@ -251,9 +255,9 @@ export const toolDeclarations: FunctionDeclaration[] = [
     description:
       "Log into utility portals via cloud browser, extract current bills, compare to last month, and alert on spikes. Run on schedule or when someone asks about a bill.",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        account_id: { type: Type.STRING, description: "specific account UUID; omit for all accounts" },
+        account_id: { type: "string", description: "specific account UUID; omit for all accounts" },
       },
     },
   },
@@ -261,18 +265,27 @@ export const toolDeclarations: FunctionDeclaration[] = [
     name: "add_utility_account",
     description: "Register a new utility account for monitoring (PG&E, Comcast, water, etc.).",
     parameters: {
-      type: Type.OBJECT,
+      type: "object",
       properties: {
-        name: { type: Type.STRING, description: "e.g. 'PG&E'" },
-        login_url: { type: Type.STRING },
-        account_holder: { type: Type.STRING },
-        context_id: { type: Type.STRING, description: "Browserbase persistent context ID" },
-        alert_threshold_pct: { type: Type.NUMBER, description: "alert if bill increases by this %, default 15" },
+        name: { type: "string", description: "e.g. 'PG&E'" },
+        login_url: { type: "string" },
+        account_holder: { type: "string" },
+        context_id: { type: "string", description: "Browserbase persistent context ID" },
+        alert_threshold_pct: { type: "number", description: "alert if bill increases by this %, default 15" },
       },
       required: ["name", "login_url", "account_holder", "context_id"],
     },
   },
 ];
+
+/**
+ * OpenAI tool format: the Gemini declaration wrapper differs — the inner JSON
+ * Schema (`parameters`) is the same, only the envelope changes.
+ */
+export const toolDeclarations = functionDeclarations.map((d) => ({
+  type: "function" as const,
+  function: d,
+}));
 
 // ── Dispatch ──────────────────────────────────────────────────────────────────
 

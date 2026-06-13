@@ -4,7 +4,7 @@ import {
   type MaintenanceIssue,
   type MaintenancePriority,
 } from "./state.js";
-import { generateText, MAIN_MODEL } from "./gemini.js";
+import { generateText, MAIN_MODEL } from "./llm.js";
 import { buildChatSystemPrompt, findBannedWord } from "./prompts.js";
 import { serializeState } from "./state.js";
 import { log } from "./log.js";

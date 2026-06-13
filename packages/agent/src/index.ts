@@ -1,7 +1,7 @@
 import "./env.js";
 import express from "express";
 import { classifyMessage } from "./classifier.js";
-import { runToolLoop } from "./gemini.js";
+import { runToolLoop } from "./llm.js";
 import { buildChatSystemPrompt, findBannedWord } from "./prompts.js";
 import { serializeState, state } from "./state.js";
 import { log } from "./log.js";
@@ -123,9 +123,13 @@ app.post("/chat", async (req, res) => {
     }
 
     // ── Classifier pre-filter ─────────────────────────────────────────────────
+    // A direct address always wins: if someone @-mentions or names hearth, reply
+    // no matter the topic. Otherwise stay out of pure peer-to-peer chatter and
+    // only chime in when the message touches hearth's domains.
+    const addressedToHearth = /(^|\W)@?hearth\b/i.test(text);
     const classification = await classifyMessage(sender, text);
 
-    if (!classification.relevant && classification.confidence === "high") {
+    if (!addressedToHearth && !classification.relevant) {
       log("chat.skipped", { sender, type: classification.type });
       res.json({ reply: null });
       return;

@@ -1,4 +1,4 @@
-import { generateJson, LITE_MODEL } from "./gemini.js";
+import { generateJson, LITE_MODEL } from "./llm.js";
 import { buildUtilitySystemPrompt, JSON_ONLY } from "./prompts.js";
 import { serializeState, state, money } from "./state.js";
 import { log } from "./log.js";
